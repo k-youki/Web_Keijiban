@@ -8,7 +8,7 @@
     <meta name="author" content="">
     <link rel="icon" href="favicon.ico">
 
-    <title>Dashboard Template for Bootstrap</title>
+    <title>こたに掲示板</title>
 
     <!-- Bootstrap core CSS -->
     <link href="css/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -38,25 +38,44 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <a class="navbar-brand" href="#">Twitter風掲示板</a>
+          <a class="navbar-brand" href="tweet.php">こたに掲示板</a>
         </div>
-        
+
       </div>
     </nav>
 
         <div class="col-md-3">
-          ツイート内容を入力してください。<br> 
-          <form action ="tweet2.php" method="GET">
+          <form action ="tweet_ins.php" method="GET">
+            <br>
+            お名前を入力してください。<br>
+            <textarea name="account" cols="10" rows="1"></textarea>
+            <br>
+            <br>
+            投稿内容を入力してください。<br>
             <textarea name="contents" cols="40" rows="4"></textarea>
             <br>
-            <input type="submit" value="ツイート" class="btn btn-primary" >
+
+            <input type="submit" value="投稿" class="btn btn-primary" >
           </form>
         </div>
 
         <div class="col-md-9">
 
           <div class="table-responsive">
-            <p>ここにツイートを表示する。以下はサンプル。</p>
+              <?php
+
+$connect = mysql_connect("localhost","root","");
+
+//SQLをUTF8形式で書くよ、という意味
+mysql_query("SET NAMES utf8",$connect);
+
+$tweet_id = $_GET['tweet_id'];
+
+//この１行で実行
+mysql_db_query("test","delete from tweet_tbl where tweet_id = $tweet_id");
+
+              ?>
+
             <table class="table table-striped">
               <thead>
                 <tr>
@@ -66,31 +85,33 @@
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td>千葉順</td>
-                  <td>頑張って勉強していきましょう！</td>
-                  <td>2014-11-22 11:00:12</td>
-                </tr>
-                <tr>
-                  <td>千葉順</td>
-                  <td>サンプル投稿4！</td>
-                  <td>2014-11-22 09:22:33</td>
-                </tr>
-                <tr>
-                  <td>千葉順</td>
-                  <td>サンプル投稿3！</td>
-                  <td>2014-11-22 09:22:30</td>
-                </tr>
-                <tr>
-                  <td>千葉順</td>
-                  <td>サンプル投稿2！</td>
-                  <td>2014-11-22 09:22:24</td>
-                </tr>
-                <tr>
-                  <td>千葉順</td>
-                  <td>サンプル投稿！</td>
-                  <td>2014-11-22 09:22:20</td>
-                </tr>
+<?php
+
+//登録された時間の新しい時間に並べて表示したい
+//この１行で実行
+$rs = mysql_db_query("test","select * from tweet_tbl order by input_datetime desc");
+
+while(true){
+  $row = mysql_fetch_assoc($rs);
+  if($row == null){
+    break;
+  }else{
+    echo "<tr>";
+    echo "<td>{$row['account']}</td>";
+    echo "<td>{$row['contents']}</td>";
+    echo "<td>{$row['input_datetime']}</td>";
+    $tweet_id = $row["tweet_id"];
+    echo "<td><a href='tweet_del.php?tweet_id=$tweet_id'>削除</a></td>";
+    echo "</tr>";
+  }
+}
+
+//データベースとの接続を切る
+mysql_close($connect);
+
+
+?>
+
               </tbody>
             </table>
           </div>
