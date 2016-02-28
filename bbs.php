@@ -38,24 +38,25 @@
                     <span class="icon-bar"></span>
                     <span class="icon-bar"></span>
                 </button>
-                <a class="navbar-brand" href="tweet.php">こたに掲示板</a>
+                <a class="navbar-brand" href="bbs.php">こたに掲示板</a>
             </div>
+
         </div>
     </nav>
 
     <div class="col-md-3">
-        <form action ="tweet_ins.php" method="GET" enctype="multipart/form-data">
+        <form method="post" action ="bbs.php" enctype="multipart/form-data">
             <fieldset>
                 <legend>投稿</legend>
                 お名前：<input type="text" name="account" size="20">
                 <br><br>
                 投稿内容を入力してください。<br>
-                <textarea name="contents" cols="40" rows="4"></textarea>
+                <textarea name="contents" cols="40" rows="4">
+                </textarea>
                 <br><br>
                 画像ファイルを選択
-                <input type="file" name="upfile" /><br>
-                <!--input type="submit" value="送信" /-->
-                <input type="submit" value="投稿" class="btn btn-primary" >
+                <input type="file" name="image" /><br>
+                <input type="submit" name="write" value="投稿" class="btn btn-primary" >
             </fieldset>
         </form>
     </div>
@@ -76,36 +77,76 @@
                     $connect = mysql_connect("localhost","root","");
 
                     //SQLをUTF8形式で書くよ、という意味
-                    mysql_query("SET NAMES utf8",$connect);
+                    mysql_query( "SET NAMES utf8",$connect );
+
+                    if(isset($_POST['write'])){
+                        $account  = $_POST["account"];
+                        $contents = $_POST["contents"];
+                        $tname = $_FILES['image']['tmp_name'];
+                        $len = mb_strlen($contents,"utf-8");
+
+                        if($len == 0){
+                            echo "空白です";
+                        }else if($len > 140){
+                            echo "文字数オーバーです";
+                        }else{
+                            //testというデータベースに対してSQLを実行する
+                            mysql_db_query( "test", "INSERT tweet_tbl(account,contents,input_datetime)
+                            values('$account','$contents',sysdate())" );
+                        }
+                        if( $tname ){
+                            $type = $_FILES['image']['type'];
+                            if ($type != "image/jpeg" && $type != "image/pjpeg") {
+                                //error("JPEG形式ではありません");
+                            }
+                            $no = mysql_insert_id();
+                            $path = "image/$no.jpg";
+                            move_uploaded_file($tname, $path);
+                            $path_t = "image/{$no}_t.jpg";
+                            list($sw, $sh) = getimagesize($path);
+                            $dw = 128;
+                            $dh = $dw * $sh / $sw;
+                            $src = imagecreatefromjpeg($path);
+                            $dst = imagecreatetruecolor($dw, $dh);
+                            imagecopyresized($dst, $src, 0, 0, 0, 0, $dw, $dh, $sw, $sh);
+                            imagejpeg($dst, $path_t);
+                        }
+
+                    }
+                    if(isset($_POST['delete'])){
+                        $tweet_id = $_POST['tweet_id'];
+                        mysql_db_query("test","delete from tweet_tbl where tweet_id = $tweet_id");
+                    }
 
                     //登録された時間の新しい時間に並べて表示したい
                     //この１行で実行
                     $rs = mysql_db_query("test","select * from tweet_tbl order by input_datetime desc");
 
-                    while(true){
-                        $row = mysql_fetch_assoc($rs);
-                        if($row == null){
-                            break;
-                        }else{
-                            echo "<tr>";
-                            //echo "<td>{$row['tweet_id']}</td>";
-                            echo "<td>{$row['account']}</td>";
-                            echo "<td>{$row['contents']}</td>";
-                            echo "<td>{$row['input_datetime']}</td>";
-                            $tweet_id = $row["tweet_id"];
-                            echo "<td><a href='tweet_del.php?tweet_id=$tweet_id'>削除</a></td>";
-                            $fn = "image/{$tweet_id}.jpg";
-                            $fn_t = "image/{$tweet_id}_t.jpg";
-                            if (file_exists($fn)){
-                                print "<br><br><a href='$fn'><img src='$fn_t' border='0'></a>";
-                            }
-                            echo "</tr>";
+                    while($row = mysql_fetch_assoc($rs)){
+                        $tweet_id = $row["tweet_id"];
+                        echo "<tr>";
+                        //echo "<td>{$row['tweet_id']}</td>";
+                        echo "<td>{$row['account']}</td>";
+                        echo "<td>{$row['contents']}";
+                        $fn = "image/{$tweet_id}.jpg";
+                        $fn_t = "image/{$tweet_id}_t.jpg";
+                        if (file_exists($fn)) {
+                            print "<br><a href='$fn'><img src='$fn_t' border='0'></a>";
                         }
+                        echo "</td>";
+                        echo "<td>{$row['input_datetime']}</td>";
+                        echo "<td><form method=\"post\" action=\"bbs.php\">";
+                        echo "<input type=\"hidden\" name=\"tweet_id\" value={$row['tweet_id']}>";
+                        echo "<input type=\"submit\" name=\"delete\" value=\"削除\" class=\"btn btn-danger\">";
+                        echo "</form></td>";
+                        echo "</tr>";
                     }
 
                     //データベースとの接続を切る
                     mysql_close($connect);
+
                     ?>
+
                 </tbody>
             </table>
         </div>
